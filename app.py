@@ -24,8 +24,8 @@ def read_csv_file(file_path):
         # Iterate over each row and append values to respective columns
         for row in csv_reader:
             for i, value in enumerate(row):
+                print(i)
                 columns[i].append(float(value))
-
     return columns
 
 def format_datetime(x):
@@ -46,43 +46,16 @@ def process_data():
     formated_column_1 = [format_datetime(x) for x in column_1]
     return formated_column_1, column_2
 
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    thread = Thread(target=take_measurements)
-    thread.start()
-    return render_template('index.html')
-
-@app.route('/logs')
-def show_logs():
-    logs = generate_logs()
-    return render_template('logs.html', logs=logs)
-
-@app.route('/noise')
-def noise():
-    column_1, column_2 = process_data()
-    if len(column_1) >= 30:
-        last_30_time = column_1[-30:]
-        last_30_values = column_2[-30:]
-        data_dict = {'datetime': last_30_time, 'value': last_30_values}
-    else:
-        data_dict = {'datetime': column_1, 'value': column_2}
-    return render_template('plot_noise.html', data=data_dict)
-
-def generate_logs():
-    column_1, column_2 = process_data()
-
-    seq = find_consecutive_ones_indices(column_2)
-
-    log_list = []
-    for start_noise, end_noise in seq:
-        len_noise = end_noise + 1 - start_noise
-        start_time = column_1[start_noise]
-        end_time = column_1[end_noise]
-        log = f'Un sonido de {len_noise} segundos fue detectado entre {start_time} y {end_time}'
-        log_list.append(log)
-    return log_list
+def take_measurements():
+    filename = 'C:/Users/elisa/Documents/2023-1/Lab_TICs/Proyecto/noise_detection'
+    for i in range(15):
+        time.sleep(1)
+        current_time = time.time()
+        value = bool(random.randint(0, 1))
+        if value:
+            write_csv(filename, current_time, 1)
+        else:
+            write_csv(filename, current_time, 0)
 
 def find_consecutive_ones_indices(binary_list):
     sequences = []
@@ -102,22 +75,58 @@ def find_consecutive_ones_indices(binary_list):
 
     return sequences
 
-def take_measurements():
-    filename = 'C:/Users/elisa/Documents/2023-1/Lab_TICs/Proyecto/noise_detection'
-    start_time_measurements = time.time()
-    while True:
-        current_time = time.time()
-        elapsed_time_measurements = current_time - start_time_measurements
-        if abs(elapsed_time_measurements - 15) < 0.001:
-            # Deja de tomar mediciones
-            break
-        value = bool(random.randint(0, 1))
+def generate_logs(page):
+    column_1, column_2 = process_data()
 
-        if value:
-            write_csv(filename, current_time, 1)
+    seq = find_consecutive_ones_indices(column_2)
+
+    log_list = []
+    for start_noise, end_noise in seq:
+        len_noise = end_noise + 1 - start_noise
+        start_time = column_1[start_noise]
+        end_time = column_1[end_noise]
+        if page == 'baby':
+            log = f'Tu bebé lloró por {len_noise} segundos entre {start_time} y {end_time}'
+        elif page == 'bib':
+            log = f'Hubo un ruido de {len_noise} segundos entre {start_time} y {end_time} en la biblioteca de la FCFM'
         else:
-            write_csv(filename, current_time, 0)
+            log = f'Un sonido de {len_noise} segundos fue detectado entre {start_time} y {end_time}'
+        log_list.append(log)
+    return log_list
 
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    thread = Thread(target=take_measurements)
+    thread.start()
+    return render_template('index.html')
+
+@app.route('/noise')
+def noise():
+    column_1, column_2 = process_data()
+    if len(column_1) >= 30:
+        last_30_time = column_1[-30:]
+        last_30_values = column_2[-30:]
+        data_dict = {'datetime': last_30_time, 'value': last_30_values}
+    else:
+        data_dict = {'datetime': column_1, 'value': column_2}
+    return render_template('plot_noise.html', data=data_dict)
+
+@app.route('/logs')
+def show_logs():
+    logs = generate_logs('logs')
+    return render_template('logs.html', logs=logs)
+
+@app.route('/baby')
+def baby():
+    logs = generate_logs('baby')
+    return render_template('baby.html', logs=logs)
+
+@app.route('/bib')
+def bib():
+    logs = generate_logs('bib')
+    return render_template('bib.html', logs=logs)
 
 # def take_measurements():
 #     #GPIO SETUP

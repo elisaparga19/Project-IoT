@@ -52,11 +52,6 @@ def index():
     thread.start()
     return render_template('index.html')
 
-@app.route('/logs')
-def show_logs():
-    #logs = generate_logs()
-    return render_template('logs.html')
-
 @app.route('/noise')
 def noise():
     column_1, column_2 = process_data()
@@ -68,13 +63,23 @@ def noise():
         data_dict = {'datetime': column_1, 'value': column_2}
     return render_template('plot_noise.html', data=data_dict)
 
-def generate_logs():
-    file_path = 'noise_detection.csv'
-    columns = read_csv_file(file_path)
+@app.route('/logs')
+def show_logs():
+    logs = generate_logs('logs')
+    return render_template('logs.html', logs=logs)
 
-    # Accessing columns by index
-    column_1 = columns[0]
-    column_2 = columns[1]
+@app.route('/baby')
+def baby():
+    logs = generate_logs('baby')
+    return render_template('baby.html', logs=logs)
+
+@app.route('/bib')
+def bib():
+    logs = generate_logs('bib')
+    return render_template('bib.html', logs=logs)
+
+def generate_logs(page):
+    column_1, column_2 = process_data()
 
     seq = find_consecutive_ones_indices(column_2)
 
@@ -82,9 +87,15 @@ def generate_logs():
     for start_noise, end_noise in seq:
         len_noise = end_noise + 1 - start_noise
         start_time = column_1[start_noise]
-        end_time = column_2[end_noise]
-        log = f'Un sonido de {len_noise} segundos fue detectado entre {start_time} y {end_time}'
+        end_time = column_1[end_noise]
+        if page == 'baby':
+            log = f'Tu bebé lloró por {len_noise} segundos entre {start_time} y {end_time}'
+        elif page == 'bib':
+            log = f'Hubo un ruido de {len_noise} segundos entre {start_time} y {end_time} en la biblioteca de la FCFM'
+        else:
+            log = f'Un sonido de {len_noise} segundos fue detectado entre {start_time} y {end_time}'
         log_list.append(log)
+    return log_list
 
 def find_consecutive_ones_indices(binary_list):
     sequences = []
